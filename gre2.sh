@@ -25,9 +25,9 @@ read -p "Enter 1 or 2: " LOCATION
 read -p "Enter IRAN server IP: " IP_IRAN
 read -p "Enter FOREIGN server IP: " IP_FOREIGN
 
-TUN_NAME="peaknet-m2"
-SCRIPT_PATH="/usr/local/bin/peaknet-gre.sh"
-SERVICE_PATH="/etc/systemd/system/peaknet-gre.service"
+TUN_NAME="vatan-m2"
+SCRIPT_PATH="/usr/local/bin/vatan-gre.sh"
+SERVICE_PATH="/etc/systemd/system/vatan-gre.service"
 
 ### -------- create tunnel script --------
 cat > "$SCRIPT_PATH" <<EOF
@@ -40,22 +40,20 @@ if ip link show "$TUN_NAME" &>/dev/null; then
 fi
 
 if [[ "$LOCATION" == "1" ]]; then
-    ip tunnel add $TUN_NAME mode gre local $IP_IRAN remote $IP_FOREIGN ttl 255
-    ip link set $TUN_NAME up
-    ip addr add 132.168.30.2/30 dev $TUN_NAME
-
-    sysctl -w net.ipv4.ip_forward=1
-
-    iptables -A FORWARD -i eth0 -o $TUN_NAME -j ACCEPT
-    iptables -A FORWARD -i $TUN_NAME -o eth0 -j ACCEPT
-    iptables -t nat -A POSTROUTING -o $TUN_NAME -j MASQUERADE
+    sudo ip tunnel add vatan-m2 mode gre local $IP_IRAN remote $IP_FOREIGN ttl 255
+    sudo ip link set vatan-m2 up
+    sudo ip addr add 132.168.30.2/30 dev vatan-m2
+   sysctl net.ipv4.ip_forward=1
+iptables -t nat -A PREROUTING -p tcp --dport 22 -j DNAT --to-destination 132.168.30.2
+iptables -t nat -A PREROUTING -j DNAT --to-destination 132.168.30.1
+iptables -t nat -A POSTROUTING -j MASQUERADE
 
 elif [[ "$LOCATION" == "2" ]]; then
-    ip tunnel add $TUN_NAME mode gre local $IP_FOREIGN remote $IP_IRAN ttl 255
-    ip link set $TUN_NAME up
-    ip addr add 132.168.30.1/30 dev $TUN_NAME
+    sudo ip tunnel add vatan-m2 mode gre local $IP_FOREIGN remote $IP_IRAN ttl 255
+    sudo ip link set vatan-m2 up
+    sudo ip addr add 132.168.30.1/30 dev vatan-m2
 
-    sysctl -w net.ipv4.ip_forward=1
+    sudo iptables -A INPUT --proto icmp -j DROP
 fi
 EOF
 
@@ -64,7 +62,7 @@ chmod +x "$SCRIPT_PATH"
 ### -------- create systemd service --------
 cat > "$SERVICE_PATH" <<EOF
 [Unit]
-Description=peaknet GRE Tunnel
+Description=vatan GRE Tunnel
 After=network-online.target
 Wants=network-online.target
 
@@ -79,8 +77,8 @@ EOF
 
 ### -------- enable service --------
 systemctl daemon-reload
-systemctl enable peaknet-gre
-systemctl start peaknet-gre
+systemctl enable vatan-gre
+systemctl start vatan-gre
 
 echo
 echo "===================================="
