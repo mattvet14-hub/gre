@@ -33,8 +33,6 @@ SERVICE_PATH="/etc/systemd/system/vatan-gre.service"
 cat > "$SCRIPT_PATH" <<EOF
 #!/bin/bash
 
-set -e
-
 if ip link show "$TUN_NAME" &>/dev/null; then
     exit 0
 fi
@@ -46,7 +44,8 @@ if [[ "$LOCATION" == "1" ]]; then
    sysctl net.ipv4.ip_forward=1
 iptables -t nat -A PREROUTING -p tcp --dport 22 -j DNAT --to-destination 132.168.30.2
 iptables -t nat -A PREROUTING -j DNAT --to-destination 132.168.30.1
-iptables -t nat -A POSTROUTING -j MASQUERADE
+iptables -t nat -A POSTROUTING -j MASQUERADE 
+
 
 elif [[ "$LOCATION" == "2" ]]; then
     sudo ip tunnel add vatan-m2 mode gre local $IP_FOREIGN remote $IP_IRAN ttl 255
